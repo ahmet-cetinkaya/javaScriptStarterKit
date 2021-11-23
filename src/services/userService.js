@@ -1,110 +1,40 @@
-import { users } from "../data/users.js"
-import DataError from "../models/dataError.js"
+import ErrorDataResult from '../core/models/errorDataResult.js';
+import ErrorResult from '../core/models/errorResult.js';
+import Sort from '../core/helpers/sort.js';
+import SuccessDataResult from '../core/models/successDataResult.js';
+import SuccessResult from '../core/models/successResult.js';
+import UserValidator from '../validations/userValidator.js';
 
 export default class UserService {
-    constructor(loggerService) {
-        this.employees = []
-        this.customers = []
-        this.errors = []
-        this.loggerService = loggerService
-    }
+  constructor(userRepository, loggerService) {
+    this.userRepository = userRepository;
+    this.loggerService = loggerService;
+  }
 
-    load() {
-        for (const user of users) {
-            switch (user.type) {
-                case "customer":
-                    if (!this.checkCustomerValidityForErrors(user)) {
-                        this.customers.push(user)
-                    }
-                    break;
-                case "employee":
-                    if (!this.checkEmployeeValidityForErrors(user)) {
-                        this.employees.push(user)
-                    }
-                    break;
-                default:
-                    this.errors.push(new DataError("Wrong user type", user))
-                    break;
-            }
-        }
-    }
+  getAll() {
+    const users = this.userRepository.getAll();
+    return new SuccessDataResult(users);
+  }
 
-    //formik-yup
-    checkCustomerValidityForErrors(user) {
-        let requiredFields = "id firstName lastName age city".split(" ")
-        let hasErrors = false
-        for (const field of requiredFields) {
-            if (!user[field]) {
-                hasErrors = true
-                this.errors.push(
-                    new DataError(`Validation problem. ${field} is required`, user))
-            }
-        }
+  add(user) {
+    const errors = UserValidator.validate(user);
+    if (errors.length) return new ErrorResult(errors.join('|'));
 
-        if (Number.isNaN(Number.parseInt(+user.age))) {
-            hasErrors = true
-            this.errors.push(new DataError(`Validation problem. ${user.age} is not a number`, user))
-        }
+    this.userRepository.add(user);
 
-        return hasErrors
-    }
+    this.loggerService.log(user);
+    return new SuccessResult();
+  }
 
-    checkEmployeeValidityForErrors(user) {
-        let requiredFields = "id firstName lastName age city salary".split(" ")
-        let hasErrors = false
-        for (const field of requiredFields) {
-            if (!user[field]) {
-                hasErrors = true
-                this.errors.push(
-                    new DataError(`Validation problem. ${field} is required`, user))
-            }
-        }
+  getByID(id) {
+    const user = this.userRepository.getByID(id);
+    if (!user) return new ErrorDataResult();
+    return new SuccessDataResult(user);
+  }
 
-        if (Number.isNaN(Number.parseInt(user.age))) {
-            hasErrors = true
-            this.errors.push(new DataError(`Validation problem. ${user.age} is not a number`, user))
-        }
-        return hasErrors
-    }
-
-    add(user) {
-        switch (user.type) {
-            case "customer":
-                if (!this.checkCustomerValidityForErrors(user)) {
-                    this.customers.push(user)
-                }
-                break;
-            case "employee":
-                if (!this.checkEmployeeValidityForErrors(user)) {
-                    this.employees.push(user)
-                }
-                break;
-            default:
-                this.errors.push(
-                    new DataError("This user can not be added. Wrong user type", user))
-                break;
-        }
-        this.loggerService.log(user)
-    }
-
-    listCustomers() {
-        return this.customers
-    }
-
-    getCustomerById(id) {
-        return this.customers.find(u=>u.id ===id)
-    }
-
-    getCustomersSorted(){
-        return this.customers.sort((customer1,customer2)=>{
-            if(customer1.firstName>customer2.firstName){
-                return 1;
-            }else if(customer1.firstName===customer2.firstName){
-                return 0;
-            }else{
-                return -1
-            }
-        })
-    }
-
+  getAllSorted(key, direction = Sort.asc) {
+    const users = this.userRepository.getAll(),
+      sortedUsers = Sort.sortByKey(users, key, direction);
+    return new SuccessDataResult(sortedUsers);
+  }
 }
