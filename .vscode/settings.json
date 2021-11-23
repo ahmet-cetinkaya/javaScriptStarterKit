@@ -1,4 +1,10 @@
-
 {
-    "editor.fontSize": 20
+    "workbench.colorCustomizations": {
+        "sash.hoverBorder": "#f7dc6f",
+        "statusBar.background": "#f4d03f",
+        "statusBar.foreground": "#15202b",
+        "statusBarItem.hoverBackground": "#f1c40f",
+        "statusBarItem.remoteBackground": "#f4d03f",
+        "statusBarItem.remoteForeground": "#15202b"
+    }
 }
